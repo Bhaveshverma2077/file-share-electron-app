@@ -2,6 +2,20 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import express from "express";
 import fs from "fs";
+import bonjourInit from "bonjour";
+
+const bonjour = bonjourInit();
+
+bonjour.publish({
+  name: "file_sharing_app",
+  type: "file_sharing_app",
+  port: 5555,
+});
+
+const b = bonjour.find({ type: "file_sharing_app" }, (service) => {
+  console.log(service);
+});
+
 const fetch = async (url: string, ...args: any) => {
   const nodeFetch = await import("node-fetch");
   return nodeFetch.default(url, ...args);
@@ -24,8 +38,9 @@ server.post("/", (req, res) => {
 
 function createWindow() {
   const window = new BrowserWindow({
-    height: 600,
-    width: 800,
+    height: 572,
+    width: 850,
+    resizable: false,
     webPreferences: { preload: path.join(__dirname, "preload.js") },
   });
   window.webContents.openDevTools();
@@ -34,7 +49,9 @@ function createWindow() {
 }
 
 ipcMain.handle("getNearByDevices", () => {
-  console.log("getDevices");
+  console.log(b.services);
+
+  return b.services;
 });
 
 ipcMain.handle(
@@ -43,7 +60,24 @@ ipcMain.handle(
     const filePathSegment = filePath.split("\\");
     const fileName = filePathSegment[filePathSegment.length - 1];
     const readStream = fs.createReadStream(filePath);
-    const result = await fetch(`http://${ip}:5355`, {
+    const fileStats = fs.statSync(filePath);
+
+    let chunkSize = 0;
+    readStream.on("data", (chunk) => {
+      chunkSize += chunk.length;
+      console.log(Math.ceil((chunkSize / fileStats.size) * 100));
+
+      BrowserWindow.getAllWindows()[0].webContents.send(
+        "progress",
+        Math.ceil((chunkSize / fileStats.size) * 100)
+      );
+      // BrowserWindow.getAllWindows()[1].webContents.send(
+      //   "progress",
+      //   Math.ceil((chunkSize / fileStats.size) * 100)
+      // );
+      // console.log(chunk.length);
+    });
+    await fetch(`http://${ip}:5355`, {
       method: "post",
       body: readStream,
       headers: new Headers({
@@ -64,7 +98,9 @@ ipcMain.handle("recieveFile", async () => {
   if (listeningServer == null) listeningServer = server.listen(5355);
 });
 
+ipcMain.handle("", () => {});
+
 app.whenReady().then(() => {
   createWindow();
-  createWindow();
+  // createWindow();
 });
