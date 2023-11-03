@@ -26,17 +26,25 @@ const theme = createTheme({
 });
 
 interface Device {
-  addresses: Array<string>;
+  // addresses: Array<string>;
+  ip: string;
   type: string;
-  name: string;
-  port: number;
-  [value: string]: any;
+  deviceName: string;
+  // name: string;
+  // port: number;
+  // [value: string]: any;
 }
 
-interface File {
+export interface File {
   name: string;
-  progress: number;
+  path: string;
+  type: string;
+  size: number;
+  imgUrl?: string;
+  progress?: number;
 }
+
+type Page = "RecieveFiles" | "Download" | "NoDevices" | "Files";
 
 interface State {
   selectedDeviceIndex: null | number;
@@ -44,12 +52,14 @@ interface State {
   selectedDevice: null | Device;
   isDevicesLoading: boolean;
   files: { [value: string]: Array<File> };
+  page: Page;
 }
 
 const state: State = {
   isDevicesLoading: false,
   selectedDeviceIndex: null,
   selectedDevice: null,
+  page: "NoDevices",
   allDevices: [],
   files: {},
 };
@@ -59,8 +69,10 @@ export const appContext = createContext({
   changeSelectedDeviceIndex: (index: number | null) => {},
   changeSelectedDevice: (device: Device | null) => {},
   findDevices: () => {},
-  addFile: (file: any, ip: string) => {},
-  removeFile: (file: any, ip: string) => {},
+  setPage: (page: Page) => {},
+  addFile: (file: any) => {},
+  // sendFile: (file: any) => {},
+  removeFile: (file: any) => {},
   toggleDevicesLoading: (isLoading: boolean) => {},
 });
 
@@ -76,18 +88,59 @@ const Provider = (props: { children: React.ReactNode }) => {
       return { ...state, selectedDevice: device };
     });
   };
-  const addFile = (file: any, ip: string) => {
+  const setPage = (page: Page) => {
     changeAppState((state) => {
-      return { ...state, files: { ...state.files, [ip]: file } };
+      return { ...state, page };
     });
   };
-  const removeFile = (file: any, ip: string) => {
+  console.log(state.files);
+
+  // const sendFile = (device: Device | null) => {
+  //   changeAppState((state) => {
+  //     return { ...state, selectedDevice: device };
+  //   });
+  // };
+  const addFile = (f: File) => {
+    // TODO: if in list dont add
+    let file: File = f;
+    if (f.type.startsWith("image")) {
+      file.imgUrl = f.path;
+    }
+    changeAppState((state) => {
+      if (state.files[state.selectedDevice!.ip] !== undefined) {
+        const files = [...state.files[state.selectedDevice!.ip]];
+        files.push(file);
+        return {
+          ...state,
+          files: {
+            ...state.files,
+            [state.selectedDevice!.ip]: files,
+          },
+        };
+      }
+      return {
+        ...state,
+        files: { ...state.files, [state.selectedDevice!.ip]: [file] },
+      };
+    });
+  };
+  const removeFile = (file: File) => {
+    const ip = appState.selectedDevice!.ip;
     changeAppState((state) => {
       const files = { ...state.files };
-      delete files[ip];
-      return { ...state, files };
+      const newFiles = files[ip!].filter((f) => {
+        return f.path != file.path;
+      });
+      return { ...state, files: { ...state.files, [ip!]: newFiles } };
     });
   };
+  // const removeFile = (file: any, ip: string) => {
+  //   changeAppState((state) => {
+  //     const files = { ...state.files };
+  //     delete files[ip];
+  //     return { ...state, files };
+  //   });
+  // };
   const findDevices = async () => {
     const allDevices = await window.api.getNearByDevices();
     changeAppState((stat) => {
@@ -104,6 +157,7 @@ const Provider = (props: { children: React.ReactNode }) => {
     <appContext.Provider
       value={{
         ...appState,
+        setPage,
         changeSelectedDeviceIndex,
         findDevices,
         toggleDevicesLoading,

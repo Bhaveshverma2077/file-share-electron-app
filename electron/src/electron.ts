@@ -1,47 +1,140 @@
 import { app, BrowserWindow, ipcMain } from "electron";
+
+import fs from "node:fs";
 import path from "path";
-import express from "express";
-import fs from "fs";
+import http from "http";
+import { hostname } from "os";
+
+// import bleno from "bleno";
 import bonjourInit from "bonjour";
+import dgram from "dgram";
 
-const bonjour = bonjourInit();
+interface Device {
+  // addresses: Array<string>;
+  ip: string;
+  type: string;
+  deviceName: string;
+  // name: string;
+  // port: number;
+  // [value: string]: any;
+}
 
-bonjour.publish({
-  name: "file_sharing_app",
-  type: "file_sharing_app",
-  port: 5555,
+const devices: Array<Device> = [];
+const udpServer = dgram.createSocket("udp4");
+
+udpServer.on("message", (message, rinfo) => {
+  const data = JSON.parse(message.toString());
+  const deviceToAdd = devices.findIndex((device) => {
+    return device.ip == rinfo.address;
+  });
+  if (deviceToAdd === -1) {
+    devices.push({ ...data, ip: rinfo.address });
+  }
 });
 
-const b = bonjour.find({ type: "file_sharing_app" }, (service) => {
-  console.log(service);
+udpServer.on("listening", () => {
+  const address = udpServer.address();
+  console.log(`listening on address ${address.address} port ${address.port}`);
 });
+
+udpServer.bind(41234);
+const mes = { type: "file_sharing_app", deviceName: hostname() };
+const mesJson = JSON.stringify(mes);
+setInterval(() => {
+  const client = dgram.createSocket("udp4");
+  client.send(mesJson, 0, mesJson.length, 41234, "192.168.1.255", (err) => {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log("sent");
+    }
+    client.close();
+  });
+}, 6000);
+
+// noble.on("stateChange", (state) => {
+//   if (state === "poweredOn") {
+//     noble.startScanning();
+//     return;
+//   }
+//   noble.stopScanning();
+// });
+
+// noble.on("discover", (peripheral) => {
+//   console.log(peripheral);
+// });
+
+// bleno.on("stateChange", (state) => {
+//   console.log(state);
+// });
+
+// const bonjour = bonjourInit();
+
+// bonjour.publish({
+//   name: "file_sharing_app_x",
+//   type: "file_sharing_app_x",
+//   txt: { deviceName: hostname() },
+//   port: 5555,
+// });
+
+// const b = bonjour.find({ type: "file_sharing_app_x" }, (serices) => {
+//   console.log(serices);
+// });
+
+// bonjour.find({ type: "file_sharing_app_x" }, (serices) => {
+//   console.log(serices);
+// });
 
 const fetch = async (url: string, ...args: any) => {
   const nodeFetch = await import("node-fetch");
   return nodeFetch.default(url, ...args);
 };
 
-const server = express();
-
 let listeningServer: any = null;
 
-server.post("/", (req, res) => {
-  const fileName = req.header("Content-Disposition")?.split('"')[1];
+// setTimeout(() => {
+//   console.log("run");
+
+//   fetch("http://255.255.255.255:5355", {
+//     method: "post",
+//     body: JSON.stringify({ test: "working" }),
+//   });
+// }, 8000);
+
+const server = http.createServer((req, res) => {
+  // console.log("reqreqreq");
+
+  const fileName = req.headers["content-disposition"]?.split('"')[1];
   const writeStream = fs.createWriteStream(
-    path.join(__dirname, fileName ?? "file")
+    path.join(app.getPath("downloads"), fileName ?? "file")
   );
   req.pipe(writeStream);
   writeStream.on("finish", () => {
-    res.status(200).json({ message: "successful" });
+    res.end("successful");
   });
 });
+
+const dummyRequest = async () => {
+  const readStream = fs.createReadStream(
+    path.join(__dirname, "../", "../", "./public/dummy-file.txt")
+  );
+  await fetch(`http://${"localhost"}:5355`, {
+    method: "post",
+    body: readStream,
+    headers: new Headers({
+      "Content-Disposition": `attachment; filename="${"dummy-file.png"}"`,
+    }),
+  });
+};
 
 function createWindow() {
   const window = new BrowserWindow({
     height: 572,
     width: 850,
     resizable: false,
-    webPreferences: { preload: path.join(__dirname, "preload.js") },
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+    },
   });
   window.webContents.openDevTools();
   window.loadURL("http://localhost:5173");
@@ -49,9 +142,8 @@ function createWindow() {
 }
 
 ipcMain.handle("getNearByDevices", () => {
-  console.log(b.services);
-
-  return b.services;
+  // return b.services;
+  return devices;
 });
 
 ipcMain.handle(
@@ -62,45 +154,50 @@ ipcMain.handle(
     const readStream = fs.createReadStream(filePath);
     const fileStats = fs.statSync(filePath);
 
-    let chunkSize = 0;
+    let chunkSize = { size: 0 };
+    let speedSize = { size: 0 };
+
+    const interval = setInterval(() => {
+      BrowserWindow.getAllWindows()[0].webContents.send("speed", {
+        speed: chunkSize.size - speedSize.size,
+        ip,
+        filePath,
+      });
+      speedSize.size = chunkSize.size;
+    }, 1000);
+
     readStream.on("data", (chunk) => {
-      chunkSize += chunk.length;
-      console.log(Math.ceil((chunkSize / fileStats.size) * 100));
+      chunkSize.size += chunk.length;
 
       BrowserWindow.getAllWindows()[0].webContents.send(
         "progress",
-        Math.ceil((chunkSize / fileStats.size) * 100)
+        Math.ceil((chunkSize.size / fileStats.size) * 100)
       );
-      // BrowserWindow.getAllWindows()[1].webContents.send(
-      //   "progress",
-      //   Math.ceil((chunkSize / fileStats.size) * 100)
-      // );
-      // console.log(chunk.length);
     });
+    readStream.on("close", () => {
+      clearInterval(interval);
+    });
+
     await fetch(`http://${ip}:5355`, {
       method: "post",
       body: readStream,
       headers: new Headers({
         "Content-Disposition": `attachment; filename="${fileName}"`,
       }),
-    }).then((res: any) => res.json());
+    });
   }
 );
 
-// fs.writeFileSync(path.join(__dirname, fileName ?? "file"), req.body);
-
-ipcMain.handle("stopRecievingFile", async () => {
+ipcMain.handle("stopRecievingFile", () => {
   listeningServer.close();
   listeningServer = null;
 });
 
-ipcMain.handle("recieveFile", async () => {
-  if (listeningServer == null) listeningServer = server.listen(5355);
+ipcMain.handle("recieveFile", () => {
+  if (listeningServer == null)
+    listeningServer = server.listen(5355, dummyRequest);
 });
-
-ipcMain.handle("", () => {});
 
 app.whenReady().then(() => {
   createWindow();
-  // createWindow();
 });

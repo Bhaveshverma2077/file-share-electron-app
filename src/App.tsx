@@ -1,10 +1,18 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import "./App.css";
-import { Button } from "@mui/material";
+import { Button, Collapse, Switch } from "@mui/material";
 import AllDevices from "./pages/AllDevices";
 import { appContext } from "./main";
-import FileSharePage from "./pages/FileSharePage";
-import FileTile from "./components/FileTile";
+import Dropzone from "./pages/Dropzone";
+import Files from "./pages/Files";
+import RecieveFiles from "./pages/RecieveFIles";
+import MenuItem from "./pages/MenuItem";
+import ChevronDown from "./icons/ChevronDown";
+import Drawer from "./pages/Drawer";
+import FilesPage from "./pages/FIlesPage";
+import NoDevices from "./pages/NoDevices";
+import DownloadsPage from "./pages/DownloadsPage";
+import DeveloperPage from "./pages/DeveloperPage";
 declare global {
   interface Window {
     api: {
@@ -15,47 +23,30 @@ declare global {
       onSendFileCompleted: () => any;
       onRecieveFileCompleted: () => any;
       onProgress: (callback: any) => any;
+      onSpeed: (
+        callback: (speedData: {
+          speed: number;
+          ip: string;
+          filePath: "string";
+        }) => any
+      ) => any;
     };
   }
 }
 
 function App() {
-  const { findDevices, allDevices, selectedDevice } = useContext(appContext);
+  const { page } = useContext(appContext);
 
   return (
     <>
-      <div className="app-container">
-        <div className="drawer">
-          <Button sx={{ marginLeft: "8px" }} variant="contained">
-            Find Devices
-          </Button>
-          <div className="devices-container">
-            <AllDevices></AllDevices>
-          </div>
-        </div>
-        {allDevices.length == 0 && (
-          <div className="content-cotainer">
-            <p className="no-device-text"> No Devices Found</p>
-            <Button onClick={findDevices}>Search For Devices</Button>
-          </div>
-        )}
-
-        {/* {selectedDevice != null && <FileSharePage></FileSharePage>} */}
-
-        <div className="file-container">
-          <h2> Upload Files</h2>
-          <FileTile
-            fileName="vlc-123.376_ufuebXS56.exe"
-            fileSizeInKb={1233445}
-            imgUrl="https://images.unsplash.com/photo-1532456745301-b2c645d8b80d?auto=format&fit=crop&q=60&w=500&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTUxfHxhYnN0cmFjdHxlbnwwfHwwfHx8MA%3D%3D"
-          ></FileTile>
-          <FileTile
-            fileName="vlc-123.376_ufuebXS56.exe"
-            fileSizeInKb={1233445}
-            imgUrl="https://images.unsplash.com/photo-1532456745301-b2c645d8b80d?auto=format&fit=crop&q=60&w=500&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTUxfHxhYnN0cmFjdHxlbnwwfHwwfHx8MA%3D%3D"
-          ></FileTile>
-        </div>
-      </div>
+      <DeveloperPage></DeveloperPage>
+      {/* <div className="app-container">
+        <Drawer></Drawer>
+        {page == "NoDevices" && <NoDevices></NoDevices>}
+        {page == "Download" && <DownloadsPage></DownloadsPage>}
+        {page == "Files" && <FilesPage></FilesPage>}
+        {page == "RecieveFiles" && <RecieveFiles></RecieveFiles>}
+      </div> */}
     </>
   );
 }
@@ -75,13 +66,6 @@ export default App;
 
 // const handleSendFile = (ip: string, filePath: string) => {
 //   window.api.sendFile(ip, filePath);
-// };
-// const handleRecieveFile = () => {
-//   window.api.recieveFile();
-// };
-
-// const handleStopRecievingFile = () => {
-//   window.api.stopRecievingFile();
 // };
 
 {

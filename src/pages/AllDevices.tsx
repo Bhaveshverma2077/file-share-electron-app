@@ -4,16 +4,23 @@ import { appContext } from "../main";
 import { Skeleton } from "@mui/material";
 
 const AllDevies = () => {
-  const { allDevices, isDevicesLoading, changeSelectedDevice, selectedDevice } =
-    useContext(appContext);
+  const {
+    allDevices,
+    isDevicesLoading,
+    changeSelectedDevice,
+    selectedDevice,
+    setPage,
+  } = useContext(appContext);
   const devices = allDevices.map((deviceInfo) => (
     <Device
       callback={() => {
         changeSelectedDevice(deviceInfo);
+        setPage("Files");
       }}
-      key={deviceInfo.addresses[0]}
-      ip={deviceInfo.addresses[0]}
-      active={deviceInfo.addresses[0] === selectedDevice?.addresses[0]}
+      deviceName={deviceInfo.deviceName}
+      key={deviceInfo.ip}
+      ip={deviceInfo.ip}
+      active={deviceInfo.ip === selectedDevice?.ip}
     ></Device>
   ));
   if (isDevicesLoading) {

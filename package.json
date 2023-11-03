@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "author": "nice",
+  "author": "Bhavesh Verma",
   "description": "wow",
   "main": "electron/build/electron.js",
   "scripts": {
@@ -22,16 +22,23 @@
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "@mui/material": "^5.14.15",
+    "@types/bleno": "^0.4.4",
     "@types/dropzone": "^5.7.6",
+    "@types/noble": "^0.0.43",
     "@types/node-fetch": "^2.6.7",
+    "bleno": "^0.5.0",
     "bonjour": "^3.5.0",
+    "dgram": "^1.0.1",
     "dropzone": "^6.0.0-beta.2",
     "electron-squirrel-startup": "^1.0.0",
     "express": "^4.18.2",
     "multer": "^1.4.5-lts.1",
+    "noble": "^1.9.1",
     "node-fetch": "^3.3.2",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-dropzone": "^14.2.3",
+    "uninstall": "^0.0.0"
   },
   "devDependencies": {
     "@electron-forge/cli": "^6.4.2",

@@ -27,4 +27,17 @@ contextBridge.exposeInMainWorld("api", {
       callback(progress)
     );
   },
+  onSpeed: (
+    callback: (speedData: {
+      speed: number;
+      ip: string;
+      filePath: "string";
+    }) => any
+  ) => {
+    ipcRenderer.on(
+      "speed",
+      (_: any, speedData: { speed: number; ip: string; filePath: "string" }) =>
+        callback(speedData)
+    );
+  },
 });

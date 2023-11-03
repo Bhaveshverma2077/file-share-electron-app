@@ -1,6 +1,10 @@
 import { Card, LinearProgress } from "@mui/material";
 import UploadIcon from "../icons/UploadIcon";
 import CloseIcon from "../icons/CloseIcon";
+import FileIcon from "../icons/FileIcon";
+import { useContext, useEffect, useState } from "react";
+import { File, appContext } from "../main";
+import FolderIcon from "../icons/FolderIcon";
 
 const getFileSize = (fileSizeInKb: number) => {
   if (fileSizeInKb > 1048575) {
@@ -12,11 +16,33 @@ const getFileSize = (fileSizeInKb: number) => {
   return `${fileSizeInKb.toFixed(2)} KB`;
 };
 
+const handleSendFile = (ip: string, filePath: string) => {
+  window.api.sendFile(ip, filePath);
+};
+
 const FileTile = (props: {
-  imgUrl: string;
+  file: File;
+  imgUrl?: string;
+  ip: string;
   fileName: string;
   fileSizeInKb: number;
 }) => {
+  const [progress, setProgress] = useState<null | number>(0);
+  const [speed, setSpeed] = useState<number>(0);
+  useEffect(() => {
+    window.api.onProgress((progress: number) => {
+      setProgress(progress);
+    });
+
+    window.api.onSpeed(
+      (speedData: { speed: number; ip: string; filePath: string }) => {
+        if (props.file.path === speedData.filePath && props.ip === speedData.ip)
+          setSpeed(speedData.speed);
+      }
+    );
+  }, []);
+  const { selectedDevice, removeFile } = useContext(appContext);
+
   return (
     <div className="card-wrapper">
       <Card
@@ -26,23 +52,65 @@ const FileTile = (props: {
       >
         <div className="file-tile">
           <div className="file-img-container">
-            <img className="file-img" src={props.imgUrl}></img>
+            {props.imgUrl != null ? (
+              <img className="file-img" src={props.imgUrl}></img>
+            ) : (
+              // <div className="icon-container icon-container-35">
+              <div className="file-tile-file-icon center">
+                <FileIcon></FileIcon>
+              </div>
+              // </div>
+            )}
           </div>
           <div className="file-tile-content">
             <h5>{props.fileName}</h5>
-            <h6>{getFileSize(props.fileSizeInKb)}</h6>
-            <LinearProgress></LinearProgress>
-          </div>
-          <div className="file-icon-wrapper  scale-animation margin-left-12 margin-right-12">
-            <div className="icon-container icon-container-35">
-              <CloseIcon></CloseIcon>
+            <div className="file-size-speed-container">
+              <h6>{getFileSize(props.fileSizeInKb)}</h6>
+              <h6>{`${(speed / (1024 * 1024)).toFixed(2)} mbps`}</h6>
             </div>
+            {progress != null && progress < 100 && (
+              <LinearProgress
+                variant="determinate"
+                value={progress ?? 0}
+              ></LinearProgress>
+            )}
           </div>
-          <div className="file-icon-wrapper scale-animation margin-right-12">
-            <div className="icon-container icon-container-35">
-              <UploadIcon></UploadIcon>
+          {progress != null && progress < 100 && (
+            <>
+              <div className="file-icon-wrapper scale-animation margin-left-12 margin-right-12">
+                <div
+                  onClick={() => {
+                    removeFile(props.file);
+                  }}
+                  className="icon-container icon-container-35"
+                >
+                  <CloseIcon></CloseIcon>
+                </div>
+              </div>
+              <div className="file-icon-wrapper scale-animation margin-right-12">
+                <div
+                  onClick={() => {
+                    handleSendFile(selectedDevice!.ip, props.file.path);
+                  }}
+                  className="icon-container icon-container-35"
+                >
+                  <UploadIcon></UploadIcon>
+                </div>
+              </div>
+            </>
+          )}
+          {progress != null && progress === 100 && (
+            <div className="file-icon-wrapper scale-animation margin-right-12">
+              <div
+                onClick={() => {
+                  handleSendFile(selectedDevice!.ip, props.file.path);
+                }}
+                className="icon-container icon-container-35"
+              >
+                <FolderIcon></FolderIcon>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </Card>
     </div>
