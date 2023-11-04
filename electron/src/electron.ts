@@ -5,18 +5,12 @@ import path from "path";
 import http from "http";
 import { hostname } from "os";
 
-// import bleno from "bleno";
-import bonjourInit from "bonjour";
 import dgram from "dgram";
 
 interface Device {
-  // addresses: Array<string>;
   ip: string;
   type: string;
   deviceName: string;
-  // name: string;
-  // port: number;
-  // [value: string]: any;
 }
 
 const devices: Array<Device> = [];
@@ -24,6 +18,9 @@ const udpServer = dgram.createSocket("udp4");
 
 udpServer.on("message", (message, rinfo) => {
   const data = JSON.parse(message.toString());
+  if (data.type !== "file_sharing_app") {
+    return;
+  }
   const deviceToAdd = devices.findIndex((device) => {
     return device.ip == rinfo.address;
   });
@@ -52,58 +49,13 @@ setInterval(() => {
   });
 }, 6000);
 
-// noble.on("stateChange", (state) => {
-//   if (state === "poweredOn") {
-//     noble.startScanning();
-//     return;
-//   }
-//   noble.stopScanning();
-// });
-
-// noble.on("discover", (peripheral) => {
-//   console.log(peripheral);
-// });
-
-// bleno.on("stateChange", (state) => {
-//   console.log(state);
-// });
-
-// const bonjour = bonjourInit();
-
-// bonjour.publish({
-//   name: "file_sharing_app_x",
-//   type: "file_sharing_app_x",
-//   txt: { deviceName: hostname() },
-//   port: 5555,
-// });
-
-// const b = bonjour.find({ type: "file_sharing_app_x" }, (serices) => {
-//   console.log(serices);
-// });
-
-// bonjour.find({ type: "file_sharing_app_x" }, (serices) => {
-//   console.log(serices);
-// });
-
 const fetch = async (url: string, ...args: any) => {
   const nodeFetch = await import("node-fetch");
   return nodeFetch.default(url, ...args);
 };
 
 let listeningServer: any = null;
-
-// setTimeout(() => {
-//   console.log("run");
-
-//   fetch("http://255.255.255.255:5355", {
-//     method: "post",
-//     body: JSON.stringify({ test: "working" }),
-//   });
-// }, 8000);
-
 const server = http.createServer((req, res) => {
-  // console.log("reqreqreq");
-
   const fileName = req.headers["content-disposition"]?.split('"')[1];
   const writeStream = fs.createWriteStream(
     path.join(app.getPath("downloads"), fileName ?? "file")
@@ -142,7 +94,6 @@ function createWindow() {
 }
 
 ipcMain.handle("getNearByDevices", () => {
-  // return b.services;
   return devices;
 });
 

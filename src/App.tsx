@@ -39,14 +39,14 @@ function App() {
 
   return (
     <>
-      <DeveloperPage></DeveloperPage>
-      {/* <div className="app-container">
+      {/* <DeveloperPage></DeveloperPage> */}
+      <div className="app-container">
         <Drawer></Drawer>
         {page == "NoDevices" && <NoDevices></NoDevices>}
         {page == "Download" && <DownloadsPage></DownloadsPage>}
         {page == "Files" && <FilesPage></FilesPage>}
         {page == "RecieveFiles" && <RecieveFiles></RecieveFiles>}
-      </div> */}
+      </div>
     </>
   );
 }
