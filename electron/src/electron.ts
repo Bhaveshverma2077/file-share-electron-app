@@ -1,11 +1,18 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 
 import fs from "node:fs";
+import fsPromise from "node:fs/promises";
 import path from "path";
 import http from "http";
 import { hostname } from "os";
 
+import("node-fetch");
+import fileupload from "express-fileupload";
 import dgram from "dgram";
+import { readFile, writeFileSync } from "node:original-fs";
+import express from "express";
+import fileUpload from "express-fileupload";
+import { readFileSync } from "original-fs";
 
 interface Device {
   ip: string;
@@ -51,33 +58,49 @@ setInterval(() => {
 
 const fetch = async (url: string, ...args: any) => {
   const nodeFetch = await import("node-fetch");
+  // return nodeFetch.default(url, ...args);
   return nodeFetch.default(url, ...args);
 };
 
 let listeningServer: any = null;
+
 const server = http.createServer((req, res) => {
   const fileName = req.headers["content-disposition"]?.split('"')[1];
-  const writeStream = fs.createWriteStream(
-    path.join(app.getPath("downloads"), fileName ?? "file")
-  );
-  req.pipe(writeStream);
-  writeStream.on("finish", () => {
-    res.end("successful");
+  BrowserWindow.getAllWindows()[0].webContents.send("onIncommingFile", {
+    fileName,
   });
+  console.log(`onIncommingFile:${fileName}`);
+
+  ipcMain.handleOnce(
+    `onIncommingFile:${fileName}`,
+    (e, result: { accept: boolean }) => {
+      if (!result.accept) {
+        res.end("File Rejected");
+        return;
+      }
+      const writeStream = fs.createWriteStream(
+        path.join(app.getPath("downloads"), fileName ?? "file")
+      );
+      req.pipe(writeStream);
+      writeStream.on("finish", () => {
+        res.end("successful");
+      });
+    }
+  );
 });
 
-const dummyRequest = async () => {
-  const readStream = fs.createReadStream(
-    path.join(__dirname, "../", "../", "./public/dummy-file.txt")
-  );
-  await fetch(`http://${"localhost"}:5355`, {
-    method: "post",
-    body: readStream,
-    headers: new Headers({
-      "Content-Disposition": `attachment; filename="${"dummy-file.png"}"`,
-    }),
-  });
-};
+// const dummyRequest = async () => {
+//   const readStream = fs.createReadStream(
+//     path.join(__dirname, "../", "../", "./public/dummy-file.txt")
+//   );
+//   await fetch(`http://${"localhost"}:5355`, {
+//     method: "post",
+//     body: readStream,
+//     headers: new Headers({
+//       "Content-Disposition": `attachment; filename="${"dummy-file.png"}"`,
+//     }),
+//   });
+// };
 
 function createWindow() {
   const window = new BrowserWindow({
@@ -119,7 +142,6 @@ ipcMain.handle(
 
     readStream.on("data", (chunk) => {
       chunkSize.size += chunk.length;
-
       BrowserWindow.getAllWindows()[0].webContents.send(
         "progress",
         Math.ceil((chunkSize.size / fileStats.size) * 100)
@@ -128,12 +150,14 @@ ipcMain.handle(
     readStream.on("close", () => {
       clearInterval(interval);
     });
-
+    // const file = await fsPromise.readFile(filePath);
     await fetch(`http://${ip}:5355`, {
       method: "post",
       body: readStream,
+
       headers: new Headers({
         "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Content-Type": `application/octet-stream"`,
       }),
     });
   }
@@ -145,8 +169,7 @@ ipcMain.handle("stopRecievingFile", () => {
 });
 
 ipcMain.handle("recieveFile", () => {
-  if (listeningServer == null)
-    listeningServer = server.listen(5355, dummyRequest);
+  if (listeningServer == null) listeningServer = server.listen(5355);
 });
 
 app.whenReady().then(() => {

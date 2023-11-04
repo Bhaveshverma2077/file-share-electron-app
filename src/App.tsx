@@ -1,6 +1,6 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import "./App.css";
-import { Button, Collapse, Switch } from "@mui/material";
+import { Button, Collapse, Switch, Snackbar, IconButton } from "@mui/material";
 import AllDevices from "./pages/AllDevices";
 import { appContext } from "./main";
 import Dropzone from "./pages/Dropzone";
@@ -13,6 +13,8 @@ import FilesPage from "./pages/FIlesPage";
 import NoDevices from "./pages/NoDevices";
 import DownloadsPage from "./pages/DownloadsPage";
 import DeveloperPage from "./pages/DeveloperPage";
+import CloseIcon from "./icons/CloseIcon";
+import CheckIcon from "./icons/CheckIcon";
 declare global {
   interface Window {
     api: {
@@ -23,6 +25,8 @@ declare global {
       onSendFileCompleted: () => any;
       onRecieveFileCompleted: () => any;
       onProgress: (callback: any) => any;
+      onIncommingFile: (callback: any) => any;
+      sendIncommingFileResponse: (fielName: string, accept: boolean) => any;
       onSpeed: (
         callback: (speedData: {
           speed: number;
@@ -35,12 +39,53 @@ declare global {
 }
 
 function App() {
-  const { page } = useContext(appContext);
-
+  const { page, snackbar, setSnackBar, addDownloadFile } =
+    useContext(appContext);
+  useEffect(() => {
+    window.api.onIncommingFile(({ fileName }: { fileName: string }) => {
+      setSnackBar({
+        text: `Incomming File: ${fileName}`,
+        action: (
+          <div className="snackbar-action-container">
+            <div
+              className="snackbar-icon-container container-red snackbar-icon-close"
+              onClick={() => {
+                window.api.sendIncommingFileResponse(fileName, false);
+                // addDownloadFile("")
+                setSnackBar(null);
+              }}
+            >
+              <CloseIcon></CloseIcon>
+            </div>
+            <div
+              className="snackbar-icon-container container-green snackbar-icon-check"
+              onClick={() => {
+                window.api.sendIncommingFileResponse(fileName, true);
+                setSnackBar(null);
+              }}
+            >
+              <CheckIcon></CheckIcon>
+            </div>
+          </div>
+        ),
+      });
+    });
+  }, []);
+  console.log(snackbar);
   return (
     <>
       {/* <DeveloperPage></DeveloperPage> */}
       <div className="app-container">
+        {snackbar && (
+          <Snackbar
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            open={true}
+            // onClose={}
+            sx={{ "& .MuiPaper-root": { backgroundColor: "#583DA1" } }}
+            message={snackbar?.text}
+            action={snackbar?.action}
+          />
+        )}
         <Drawer></Drawer>
         {page == "NoDevices" && <NoDevices></NoDevices>}
         {page == "Download" && <DownloadsPage></DownloadsPage>}
@@ -52,6 +97,39 @@ function App() {
 }
 
 export default App;
+
+// {/* <>
+// <IconButton
+//   sx={{
+//     backgroundColor: "#D80032",
+//     marginLeft: "8px",
+//     marginRight: "6px",
+//   }}
+//   size="small"
+//   aria-label="close"
+//   color="inherit"
+//   onClick={() => {}}
+// >
+//   <CloseIcon></CloseIcon>
+//   {/* <Close fontSize="small" /> */}
+// </IconButton>
+
+//               <IconButton
+//                 className="icon-container"
+//                 sx={{
+//                   backgroundColor: "#2b8a3e",
+//                   marginLeft: "2px",
+//                   marginRight: "6px",
+//                 }}
+//                 size="small"
+//                 aria-label="close"
+//                 color="inherit"
+//                 onClick={() => {}}
+//               >
+//                 <CheckIcon></CheckIcon>
+//                 {/* <Close fontSize="small" /> */}
+//               </IconButton>
+//             </> */}
 
 // const [progress, setProgress] = useState<null | number>(0);
 //   useEffect(() => {

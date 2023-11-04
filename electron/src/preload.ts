@@ -27,6 +27,14 @@ contextBridge.exposeInMainWorld("api", {
       callback(progress)
     );
   },
+  onIncommingFile: (callback: (fileName: string) => any) => {
+    ipcRenderer.on("onIncommingFile", (_: any, fileName: string) =>
+      callback(fileName)
+    );
+  },
+  sendIncommingFileResponse: (fileName: string, accept: boolean) => {
+    ipcRenderer.invoke(`onIncommingFile:${fileName}`, { accept });
+  },
   onSpeed: (
     callback: (speedData: {
       speed: number;

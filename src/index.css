@@ -213,6 +213,38 @@ body {
   width: 20px;
 }
 
+.snackbar-icon-container {
+  display: flex;
+  justify-content: center;
+  border-radius: 100px;
+  align-items: center;
+  height: 28px;
+  width: 28px;
+}
+.snackbar-icon-close {
+  margin-left: 6px;
+  margin-right: 6px;
+}
+.snackbar-icon-check {
+  margin-right: 6px;
+}
+.snackbar-icon-container:hover {
+  transform: scale(1.15);
+  transition: transform 0.3s;
+}
+
+.snackbar-action-container {
+  display: flex;
+}
+
+.container-red {
+  background-color: #d80032;
+}
+
+.container-green {
+  background-color: #2b8a3e;
+}
+
 .devices-container {
   /* padding-top: 35px; */
 }

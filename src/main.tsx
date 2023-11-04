@@ -47,20 +47,24 @@ export interface File {
 type Page = "RecieveFiles" | "Download" | "NoDevices" | "Files";
 
 interface State {
+  snackbar: null | { text: string; action: React.ReactNode };
   selectedDeviceIndex: null | number;
   allDevices: Array<any>;
   selectedDevice: null | Device;
   isDevicesLoading: boolean;
   files: { [value: string]: Array<File> };
+  downloadFiles: { [value: string]: Array<File> };
   page: Page;
 }
 
 const state: State = {
+  snackbar: null,
   isDevicesLoading: false,
   selectedDeviceIndex: null,
   selectedDevice: null,
   page: "NoDevices",
   allDevices: [],
+  downloadFiles: {},
   files: {},
 };
 
@@ -71,8 +75,11 @@ export const appContext = createContext({
   findDevices: () => {},
   setPage: (page: Page) => {},
   addFile: (file: any) => {},
+  addDownloadFile: (file: any, ip: string) => {},
+  setSnackBar: (file: any) => {},
   // sendFile: (file: any) => {},
   removeFile: (file: any) => {},
+  removeDownloadFile: (file: any, ip: string) => {},
   toggleDevicesLoading: (isLoading: boolean) => {},
 });
 
@@ -86,6 +93,11 @@ const Provider = (props: { children: React.ReactNode }) => {
   const changeSelectedDevice = (device: Device | null) => {
     changeAppState((state) => {
       return { ...state, selectedDevice: device };
+    });
+  };
+  const setSnackBar = (snackBar: { text: string; action: React.ReactNode }) => {
+    changeAppState((state) => {
+      return { ...state, snackbar: snackBar };
     });
   };
   const setPage = (page: Page) => {
@@ -134,6 +146,40 @@ const Provider = (props: { children: React.ReactNode }) => {
       return { ...state, files: { ...state.files, [ip!]: newFiles } };
     });
   };
+
+  const addDownloadFile = (f: File, ip: string) => {
+    // TODO: if in list dont add
+    let file: File = f;
+    if (f.type.startsWith("image")) {
+      file.imgUrl = f.path;
+    }
+    changeAppState((state) => {
+      if (state.files[ip] !== undefined) {
+        const files = [...state.files[ip]];
+        files.push(file);
+        return {
+          ...state,
+          files: {
+            ...state.files,
+            [ip]: files,
+          },
+        };
+      }
+      return {
+        ...state,
+        files: { ...state.files, [ip]: [file] },
+      };
+    });
+  };
+  const removeDownloadFile = (file: File, ip: string) => {
+    changeAppState((state) => {
+      const files = { ...state.files };
+      const newFiles = files[ip!].filter((f) => {
+        return f.path != file.path;
+      });
+      return { ...state, files: { ...state.files, [ip!]: newFiles } };
+    });
+  };
   // const removeFile = (file: any, ip: string) => {
   //   changeAppState((state) => {
   //     const files = { ...state.files };
@@ -157,6 +203,9 @@ const Provider = (props: { children: React.ReactNode }) => {
     <appContext.Provider
       value={{
         ...appState,
+        addDownloadFile,
+        removeDownloadFile,
+        setSnackBar,
         setPage,
         changeSelectedDeviceIndex,
         findDevices,
