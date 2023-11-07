@@ -39,6 +39,7 @@ export interface File {
   name: string;
   path: string;
   type: string;
+  completed?: boolean;
   size: number;
   imgUrl?: string;
   progress?: number;
@@ -74,6 +75,7 @@ export const appContext = createContext({
   changeSelectedDevice: (device: Device | null) => {},
   findDevices: () => {},
   setPage: (page: Page) => {},
+  setFileCompleted: (download: boolean, ip: string, fileName: string) => {},
   addFile: (file: any) => {},
   addDownloadFile: (file: any, ip: string) => {},
   setSnackBar: (file: any) => {},
@@ -98,6 +100,35 @@ const Provider = (props: { children: React.ReactNode }) => {
   const setSnackBar = (snackBar: { text: string; action: React.ReactNode }) => {
     changeAppState((state) => {
       return { ...state, snackbar: snackBar };
+    });
+  };
+  const setFileCompleted = (
+    download: boolean,
+    ip: string,
+    fileName: string
+  ) => {
+    let propertyName: "files" | "downloadFiles" = "files";
+    if (download) {
+      propertyName = "downloadFiles";
+    }
+
+    changeAppState((state) => {
+      console.log(state);
+
+      if (state[propertyName][ip] == null) {
+        return { ...state };
+      }
+      const fileIndex = state[propertyName][ip].findIndex((file) => {
+        return file.name === fileName;
+      });
+      let files = [...state[propertyName][ip]];
+      if (fileIndex !== -1) {
+        files[fileIndex].completed = true;
+      }
+      return {
+        ...state,
+        [propertyName]: { ...state[propertyName], [ip]: files },
+      };
     });
   };
   const setPage = (page: Page) => {
@@ -154,20 +185,20 @@ const Provider = (props: { children: React.ReactNode }) => {
       file.imgUrl = f.path;
     }
     changeAppState((state) => {
-      if (state.files[ip] !== undefined) {
-        const files = [...state.files[ip]];
+      if (state.downloadFiles[ip] !== undefined) {
+        const files = [...state.downloadFiles[ip]];
         files.push(file);
         return {
           ...state,
-          files: {
-            ...state.files,
+          downloadFiles: {
+            ...state.downloadFiles,
             [ip]: files,
           },
         };
       }
       return {
         ...state,
-        files: { ...state.files, [ip]: [file] },
+        downloadFiles: { ...state.downloadFiles, [ip]: [file] },
       };
     });
   };
@@ -203,6 +234,7 @@ const Provider = (props: { children: React.ReactNode }) => {
     <appContext.Provider
       value={{
         ...appState,
+        setFileCompleted,
         addDownloadFile,
         removeDownloadFile,
         setSnackBar,

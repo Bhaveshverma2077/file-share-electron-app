@@ -24,8 +24,39 @@ declare global {
       stopRecievingFile: () => any;
       onSendFileCompleted: () => any;
       onRecieveFileCompleted: () => any;
-      onProgress: (callback: any) => any;
-      onIncommingFile: (callback: any) => any;
+      onDownloadSpeed: (
+        callback: (speedData: {
+          speed: number;
+          ip: string;
+          fileName: string;
+        }) => any
+      ) => any;
+      onDownloadProgress: (
+        callback: (progressData: {
+          progress: number;
+          ip: string;
+          fileName: string;
+        }) => any
+      ) => any;
+      onDownloadCompleted: (
+        callback: (progressData: { ip: string; fileName: string }) => any
+      ) => any;
+      onSendCompleted: (
+        callback: (progressData: { ip: string; fileName: string }) => any
+      ) => any;
+      onProgress: (
+        callback: (progressData: {
+          progress: number;
+          ip: string;
+          fileName: string;
+        }) => any
+      ) => any;
+      onIncommingFile: (
+        callback: (fileDetails: {
+          file: { name: string; type: string; size: number };
+          ip: string;
+        }) => any
+      ) => any;
       sendIncommingFileResponse: (fielName: string, accept: boolean) => any;
       onSpeed: (
         callback: (speedData: {
@@ -39,37 +70,50 @@ declare global {
 }
 
 function App() {
-  const { page, snackbar, setSnackBar, addDownloadFile } =
+  const { page, snackbar, setSnackBar, addDownloadFile, setFileCompleted } =
     useContext(appContext);
   useEffect(() => {
-    window.api.onIncommingFile(({ fileName }: { fileName: string }) => {
-      setSnackBar({
-        text: `Incomming File: ${fileName}`,
-        action: (
-          <div className="snackbar-action-container">
-            <div
-              className="snackbar-icon-container container-red snackbar-icon-close"
-              onClick={() => {
-                window.api.sendIncommingFileResponse(fileName, false);
-                // addDownloadFile("")
-                setSnackBar(null);
-              }}
-            >
-              <CloseIcon></CloseIcon>
+    window.api.onIncommingFile(
+      ({
+        file,
+        ip,
+      }: {
+        file: { name: string; type: string; size: number };
+        ip: string;
+      }) => {
+        setSnackBar({
+          text: `Incomming File: ${file.name}`,
+          action: (
+            <div className="snackbar-action-container">
+              <div
+                className="snackbar-icon-container container-red snackbar-icon-close"
+                onClick={() => {
+                  window.api.sendIncommingFileResponse(file.name, false);
+                  setSnackBar(null);
+                }}
+              >
+                <CloseIcon></CloseIcon>
+              </div>
+              <div
+                className="snackbar-icon-container container-green snackbar-icon-check"
+                onClick={() => {
+                  window.api.sendIncommingFileResponse(file.name, true);
+                  addDownloadFile(file, ip);
+                  window.api.onDownloadCompleted(
+                    ({ ip, fileName }: { ip: string; fileName: string }) => {
+                      setFileCompleted(true, ip, fileName);
+                    }
+                  );
+                  setSnackBar(null);
+                }}
+              >
+                <CheckIcon></CheckIcon>
+              </div>
             </div>
-            <div
-              className="snackbar-icon-container container-green snackbar-icon-check"
-              onClick={() => {
-                window.api.sendIncommingFileResponse(fileName, true);
-                setSnackBar(null);
-              }}
-            >
-              <CheckIcon></CheckIcon>
-            </div>
-          </div>
-        ),
-      });
-    });
+          ),
+        });
+      }
+    );
   }, []);
   console.log(snackbar);
   return (

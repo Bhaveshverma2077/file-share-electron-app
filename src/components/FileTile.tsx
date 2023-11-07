@@ -23,16 +23,59 @@ const handleSendFile = (ip: string, filePath: string) => {
 const FileTile = (props: {
   file: File;
   imgUrl?: string;
+  isDownload?: boolean;
   ip: string;
   fileName: string;
   fileSizeInKb: number;
 }) => {
   const [progress, setProgress] = useState<null | number>(0);
   const [speed, setSpeed] = useState<number>(0);
+  const { selectedDevice, removeFile, setFileCompleted } =
+    useContext(appContext);
   useEffect(() => {
-    window.api.onProgress((progress: number) => {
-      setProgress(progress);
-    });
+    if (props.isDownload) {
+      window.api.onDownloadProgress(
+        ({
+          progress,
+          ip,
+          fileName,
+        }: {
+          progress: number;
+          ip: string;
+          fileName: string;
+        }) => {
+          if (props.ip === ip && fileName === props.fileName) {
+            setProgress(progress);
+          }
+        }
+      );
+
+      window.api.onDownloadSpeed(
+        (speedData: { speed: number; ip: string; fileName: string }) => {
+          if (
+            props.fileName === speedData.fileName &&
+            props.ip === speedData.ip
+          )
+            setSpeed(speedData.speed);
+        }
+      );
+      return;
+    }
+    window.api.onProgress(
+      ({
+        progress,
+        ip,
+        fileName,
+      }: {
+        progress: number;
+        ip: string;
+        fileName: string;
+      }) => {
+        if (props.ip === ip && fileName === props.fileName) {
+          setProgress(progress);
+        }
+      }
+    );
 
     window.api.onSpeed(
       (speedData: { speed: number; ip: string; filePath: string }) => {
@@ -40,8 +83,12 @@ const FileTile = (props: {
           setSpeed(speedData.speed);
       }
     );
+    window.api.onSendCompleted(
+      ({ ip, fileName }: { ip: string; fileName: string }) => {
+        setFileCompleted(false, ip, fileName);
+      }
+    );
   }, []);
-  const { selectedDevice, removeFile } = useContext(appContext);
 
   return (
     <div className="card-wrapper">
@@ -66,45 +113,52 @@ const FileTile = (props: {
             <h5>{props.fileName}</h5>
             <div className="file-size-speed-container">
               <h6>{getFileSize(props.fileSizeInKb)}</h6>
-              <h6>{`${(speed / (1024 * 1024)).toFixed(2)} mbps`}</h6>
+              {progress != null && progress < 100 && progress > 0 && (
+                <h6>{`${(speed / (1024 * 1024)).toFixed(2)} mbps`}</h6>
+              )}
             </div>
-            {progress != null && progress < 100 && (
+            {progress != null && progress < 100 && progress > 0 && (
               <LinearProgress
                 variant="determinate"
                 value={progress ?? 0}
               ></LinearProgress>
             )}
           </div>
-          {progress != null && progress < 100 && (
-            <>
-              <div className="file-icon-wrapper scale-animation margin-left-12 margin-right-12">
-                <div
-                  onClick={() => {
-                    removeFile(props.file);
-                  }}
-                  className="icon-container icon-container-35"
-                >
-                  <CloseIcon></CloseIcon>
+          {!props.file.completed &&
+            !props.isDownload &&
+            progress != null &&
+            progress < 100 && (
+              <>
+                <div className="file-icon-wrapper scale-animation margin-left-12 margin-right-12">
+                  <div
+                    onClick={() => {
+                      removeFile(props.file);
+                    }}
+                    className="icon-container icon-container-35"
+                  >
+                    <CloseIcon></CloseIcon>
+                  </div>
                 </div>
-              </div>
-              <div className="file-icon-wrapper scale-animation margin-right-12">
-                <div
-                  onClick={() => {
-                    handleSendFile(selectedDevice!.ip, props.file.path);
-                  }}
-                  className="icon-container icon-container-35"
-                >
-                  <UploadIcon></UploadIcon>
+                <div className="file-icon-wrapper scale-animation margin-right-12">
+                  <div
+                    onClick={() => {
+                      handleSendFile(selectedDevice!.ip, props.file.path);
+                    }}
+                    className="icon-container icon-container-35"
+                  >
+                    <UploadIcon></UploadIcon>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
-          {progress != null && progress === 100 && (
-            <div className="file-icon-wrapper scale-animation margin-right-12">
+              </>
+            )}
+          {props.isDownload && progress != null && (
+            <div
+              className={`file-icon-wrapper scale-animation margin-left-12 margin-right-12 ${
+                props.file.completed ? " " : "not-visible"
+              }`}
+            >
               <div
-                onClick={() => {
-                  handleSendFile(selectedDevice!.ip, props.file.path);
-                }}
+                onClick={() => {}}
                 className="icon-container icon-container-35"
               >
                 <FolderIcon></FolderIcon>

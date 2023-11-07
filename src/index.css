@@ -111,7 +111,8 @@ button:focus-visible {
 
 .app-container {
   width: 100%;
-
+  overflow-y: hidden;
+  height: 100vh;
   display: flex;
   align-items: center;
   /* flex-direction: column; */
@@ -233,6 +234,11 @@ body {
   transition: transform 0.3s;
 }
 
+.not-visible {
+  opacity: 0;
+  visibility: hidden;
+}
+
 .snackbar-action-container {
   display: flex;
 }
@@ -255,7 +261,8 @@ body {
 }
 
 .drawer {
-  height: 500px;
+  height: 96vh;
+  /* position: ; */
   min-width: 220px;
   padding: 12px;
   background-color: #12131a;
@@ -352,6 +359,9 @@ body {
 }
 
 .file-container {
+  overflow-y: auto;
+  height: 80vh;
+  /* background-color: pink; */
   /* background-color: #f8f9fa; */
   padding: 60px;
   align-self: self-start;

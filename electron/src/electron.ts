@@ -66,8 +66,11 @@ let listeningServer: any = null;
 
 const server = http.createServer((req, res) => {
   const fileName = req.headers["content-disposition"]?.split('"')[1];
+  const contentType = req.headers["content-type"];
+  const contentLength = Number(req.headers["content-length"]);
   BrowserWindow.getAllWindows()[0].webContents.send("onIncommingFile", {
-    fileName,
+    file: { name: fileName, type: contentType, size: Number(contentLength) },
+    ip: req.socket.remoteAddress,
   });
   console.log(`onIncommingFile:${fileName}`);
 
@@ -81,6 +84,40 @@ const server = http.createServer((req, res) => {
       const writeStream = fs.createWriteStream(
         path.join(app.getPath("downloads"), fileName ?? "file")
       );
+      let chunkSize = { size: 0 };
+      let speedSize = { size: 0 };
+
+      const interval = setInterval(() => {
+        console.log(chunkSize.size - speedSize.size);
+
+        BrowserWindow.getAllWindows()[0].webContents.send("download-speed", {
+          speed: chunkSize.size - speedSize.size,
+          ip: req.socket.remoteAddress,
+          fileName,
+        });
+        speedSize.size = chunkSize.size;
+      }, 1000);
+
+      req.on("data", (chunk) => {
+        chunkSize.size += chunk.length;
+        BrowserWindow.getAllWindows()[0].webContents.send("download-progress", {
+          progress: Math.ceil((chunkSize.size / contentLength) * 100),
+          ip: req.socket.remoteAddress,
+          fileName,
+        });
+      });
+      req.on("end", () => {
+        BrowserWindow.getAllWindows()[0].webContents.send(
+          "download-progress:completed",
+          {
+            ip: req.socket.remoteAddress,
+            fileName,
+          }
+        );
+      });
+      req.on("close", () => {
+        clearInterval(interval);
+      });
       req.pipe(writeStream);
       writeStream.on("finish", () => {
         res.end("successful");
@@ -142,22 +179,49 @@ ipcMain.handle(
 
     readStream.on("data", (chunk) => {
       chunkSize.size += chunk.length;
-      BrowserWindow.getAllWindows()[0].webContents.send(
-        "progress",
-        Math.ceil((chunkSize.size / fileStats.size) * 100)
-      );
+      BrowserWindow.getAllWindows()[0].webContents.send("progress", {
+        progress: Math.ceil((chunkSize.size / fileStats.size) * 100),
+        ip,
+        fileName,
+      });
+    });
+    readStream.on("end", () => {
+      BrowserWindow.getAllWindows()[0].webContents.send("progress:completed", {
+        ip,
+        fileName,
+      });
     });
     readStream.on("close", () => {
       clearInterval(interval);
     });
     // const file = await fsPromise.readFile(filePath);
+    const getImageType = (filename: string) => {
+      if (
+        fileName.endsWith("png") ||
+        fileName.endsWith("jpg") ||
+        fileName.endsWith("jpeg") ||
+        fileName.endsWith("webp") ||
+        fileName.endsWith("svg")
+      ) {
+        const fileNameSegments = fileName.split(".");
+        return fileNameSegments[fileNameSegments.length - 1];
+      }
+      return null;
+    };
+
+    let contentType;
+    if (getImageType(fileName) == null) {
+      contentType = "application/octet-stream";
+    } else {
+      contentType = `image/${getImageType(fileName)}`;
+    }
     await fetch(`http://${ip}:5355`, {
       method: "post",
       body: readStream,
-
       headers: new Headers({
         "Content-Disposition": `attachment; filename="${fileName}"`,
-        "Content-Type": `application/octet-stream"`,
+        "Content-Type": contentType,
+        "Content-Length": fileStats.size.toString(),
       }),
     });
   }
