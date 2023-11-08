@@ -95,6 +95,17 @@ contextBridge.exposeInMainWorld("api", {
       ) => callback(progressData)
     );
   },
+  sendDownloadCancel: (info: { ip: string; fileName: string }) => {
+    ipcRenderer.invoke(`download-cancel:${info.fileName}`, info);
+  },
+  onDownloadCancel: (
+    callback: (info: { ip: string; fileName: string }) => any
+  ) => {
+    ipcRenderer.on("download-cancel", (_, info) => callback(info));
+  },
+  sendUploadCancel: (info: { ip: string; fileName: string }) => {
+    ipcRenderer.invoke(`upload-cancel:${info.fileName}`, info);
+  },
   onDownloadCompleted: (
     callback: (progressData: { ip: string; fileName: string }) => any
   ) => {

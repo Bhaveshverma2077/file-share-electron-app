@@ -38,12 +38,17 @@ declare global {
           fileName: string;
         }) => any
       ) => any;
+      onDownloadCancel: (
+        callback: (info: { ip: string; fileName: string }) => any
+      ) => any;
       onDownloadCompleted: (
         callback: (progressData: { ip: string; fileName: string }) => any
       ) => any;
       onSendCompleted: (
         callback: (progressData: { ip: string; fileName: string }) => any
       ) => any;
+      sendDownloadCancel: (info: { ip: string; fileName: string }) => any;
+      sendUploadCancel: (info: { ip: string; fileName: string }) => any;
       onProgress: (
         callback: (progressData: {
           progress: number;
@@ -70,9 +75,18 @@ declare global {
 }
 
 function App() {
-  const { page, snackbar, setSnackBar, addDownloadFile, setFileCompleted } =
-    useContext(appContext);
+  const {
+    page,
+    snackbar,
+    setSnackBar,
+    addDownloadFile,
+    setFileFailed,
+    setFileCompleted,
+  } = useContext(appContext);
   useEffect(() => {
+    window.api.onDownloadCancel((info) => {
+      setFileFailed(true, info.ip, info.fileName);
+    });
     window.api.onIncommingFile(
       ({
         file,

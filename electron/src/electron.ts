@@ -1,18 +1,13 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 
 import fs from "node:fs";
-import fsPromise from "node:fs/promises";
 import path from "path";
 import http from "http";
 import { hostname } from "os";
 
-import("node-fetch");
-import fileupload from "express-fileupload";
 import dgram from "dgram";
-import { readFile, writeFileSync } from "node:original-fs";
-import express from "express";
-import fileUpload from "express-fileupload";
-import { readFileSync } from "original-fs";
+
+import("node-fetch");
 
 interface Device {
   ip: string;
@@ -49,8 +44,6 @@ setInterval(() => {
   client.send(mesJson, 0, mesJson.length, 41234, "192.168.1.255", (err) => {
     if (err) {
       console.log(err);
-    } else {
-      console.log("sent");
     }
     client.close();
   });
@@ -58,7 +51,6 @@ setInterval(() => {
 
 const fetch = async (url: string, ...args: any) => {
   const nodeFetch = await import("node-fetch");
-  // return nodeFetch.default(url, ...args);
   return nodeFetch.default(url, ...args);
 };
 
@@ -68,12 +60,11 @@ const server = http.createServer((req, res) => {
   const fileName = req.headers["content-disposition"]?.split('"')[1];
   const contentType = req.headers["content-type"];
   const contentLength = Number(req.headers["content-length"]);
+  const filePath = path.join(app.getPath("downloads"), fileName ?? "file");
   BrowserWindow.getAllWindows()[0].webContents.send("onIncommingFile", {
     file: { name: fileName, type: contentType, size: Number(contentLength) },
     ip: req.socket.remoteAddress,
   });
-  console.log(`onIncommingFile:${fileName}`);
-
   ipcMain.handleOnce(
     `onIncommingFile:${fileName}`,
     (e, result: { accept: boolean }) => {
@@ -81,15 +72,12 @@ const server = http.createServer((req, res) => {
         res.end("File Rejected");
         return;
       }
-      const writeStream = fs.createWriteStream(
-        path.join(app.getPath("downloads"), fileName ?? "file")
-      );
+      const writeStream = fs.createWriteStream(filePath);
+
       let chunkSize = { size: 0 };
       let speedSize = { size: 0 };
 
       const interval = setInterval(() => {
-        console.log(chunkSize.size - speedSize.size);
-
         BrowserWindow.getAllWindows()[0].webContents.send("download-speed", {
           speed: chunkSize.size - speedSize.size,
           ip: req.socket.remoteAddress,
@@ -106,7 +94,33 @@ const server = http.createServer((req, res) => {
           fileName,
         });
       });
-      req.on("end", () => {
+      ipcMain.handleOnce(
+        `download-cancel:${fileName}`,
+        (_, info: { ip: string; fileName: string }) => {
+          if (
+            info.ip !== req.socket.remoteAddress ||
+            fileName !== info.fileName
+          )
+            return;
+          req.unpipe(writeStream);
+          writeStream.end("failed");
+          fs.unlink(filePath, (err) => {
+            if (err) {
+              console.log("operation unsuccessful");
+              return;
+            }
+            console.log("operation successful");
+          });
+        }
+      );
+      req.on("error", () => {
+        BrowserWindow.getAllWindows()[0].webContents.send("download-cancel", {
+          ip: req.socket.remoteAddress,
+          fileName,
+        });
+      });
+      req.on("end", (chunk: string) => {
+        if (chunk === "failed") return;
         BrowserWindow.getAllWindows()[0].webContents.send(
           "download-progress:completed",
           {
@@ -191,6 +205,14 @@ ipcMain.handle(
         fileName,
       });
     });
+    ipcMain.handleOnce(
+      `upload-cancel:${fileName}`,
+      (_, info: { ip: string; fileName: string }) => {
+        if (ip === info.ip && fileName === info.fileName) {
+          readStream.destroy(Error("operation canceled"));
+        }
+      }
+    );
     readStream.on("close", () => {
       clearInterval(interval);
     });

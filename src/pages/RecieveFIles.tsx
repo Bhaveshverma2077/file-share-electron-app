@@ -1,4 +1,6 @@
 import { Switch } from "@mui/material";
+import { useContext } from "react";
+import { appContext } from "../main";
 
 const handleRecieveFile = () => {
   window.api.recieveFile();
@@ -9,16 +11,21 @@ const handleStopRecievingFile = () => {
 };
 
 const RecieveFiles = () => {
+  const { recieveFilesSwitch, toggleRecieveFilesSwitch } =
+    useContext(appContext);
   return (
     <div className="center">
       <h1>Recieve Files</h1>
       <Switch
+        checked={recieveFilesSwitch}
         onChange={(event) => {
           if (event.target.checked) {
+            toggleRecieveFilesSwitch();
             handleRecieveFile();
             return;
           }
           handleStopRecievingFile();
+          toggleRecieveFilesSwitch();
         }}
         sx={{
           "&": { height: "100px", width: "150px" },

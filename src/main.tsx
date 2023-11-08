@@ -40,6 +40,7 @@ export interface File {
   path: string;
   type: string;
   completed?: boolean;
+  failed?: boolean;
   size: number;
   imgUrl?: string;
   progress?: number;
@@ -49,6 +50,7 @@ type Page = "RecieveFiles" | "Download" | "NoDevices" | "Files";
 
 interface State {
   snackbar: null | { text: string; action: React.ReactNode };
+  recieveFilesSwitch: boolean;
   selectedDeviceIndex: null | number;
   allDevices: Array<any>;
   selectedDevice: null | Device;
@@ -60,6 +62,7 @@ interface State {
 
 const state: State = {
   snackbar: null,
+  recieveFilesSwitch: false,
   isDevicesLoading: false,
   selectedDeviceIndex: null,
   selectedDevice: null,
@@ -74,6 +77,7 @@ export const appContext = createContext({
   changeSelectedDeviceIndex: (index: number | null) => {},
   changeSelectedDevice: (device: Device | null) => {},
   findDevices: () => {},
+  toggleRecieveFilesSwitch: () => {},
   setPage: (page: Page) => {},
   setFileCompleted: (download: boolean, ip: string, fileName: string) => {},
   addFile: (file: any) => {},
@@ -82,6 +86,7 @@ export const appContext = createContext({
   // sendFile: (file: any) => {},
   removeFile: (file: any) => {},
   removeDownloadFile: (file: any, ip: string) => {},
+  setFileFailed: (download: boolean, ip: string, fileName: string) => {},
   toggleDevicesLoading: (isLoading: boolean) => {},
 });
 
@@ -96,6 +101,12 @@ const Provider = (props: { children: React.ReactNode }) => {
     changeAppState((state) => {
       return { ...state, selectedDevice: device };
     });
+  };
+  const toggleRecieveFilesSwitch = () => {
+    changeAppState((state) => ({
+      ...state,
+      recieveFilesSwitch: !state.recieveFilesSwitch,
+    }));
   };
   const setSnackBar = (snackBar: { text: string; action: React.ReactNode }) => {
     changeAppState((state) => {
@@ -131,6 +142,31 @@ const Provider = (props: { children: React.ReactNode }) => {
       };
     });
   };
+  const setFileFailed = (download: boolean, ip: string, fileName: string) => {
+    let propertyName: "files" | "downloadFiles" = "files";
+    if (download) {
+      propertyName = "downloadFiles";
+    }
+
+    changeAppState((state) => {
+      console.log(state);
+
+      if (state[propertyName][ip] == null) {
+        return { ...state };
+      }
+      const fileIndex = state[propertyName][ip].findIndex((file) => {
+        return file.name === fileName;
+      });
+      let files = [...state[propertyName][ip]];
+      if (fileIndex !== -1) {
+        files[fileIndex].failed = true;
+      }
+      return {
+        ...state,
+        [propertyName]: { ...state[propertyName], [ip]: files },
+      };
+    });
+  };
   const setPage = (page: Page) => {
     changeAppState((state) => {
       return { ...state, page };
@@ -152,7 +188,11 @@ const Provider = (props: { children: React.ReactNode }) => {
     changeAppState((state) => {
       if (state.files[state.selectedDevice!.ip] !== undefined) {
         const files = [...state.files[state.selectedDevice!.ip]];
-        files.push(file);
+
+        const index = files.findIndex((file: File) => file.name === f.name);
+        if (index === -1) {
+          files.push(file);
+        }
         return {
           ...state,
           files: {
@@ -187,7 +227,10 @@ const Provider = (props: { children: React.ReactNode }) => {
     changeAppState((state) => {
       if (state.downloadFiles[ip] !== undefined) {
         const files = [...state.downloadFiles[ip]];
-        files.push(file);
+        const index = files.findIndex((file) => file.name === f.name);
+        if (index === -1) {
+          files.push(file);
+        }
         return {
           ...state,
           downloadFiles: {
@@ -235,6 +278,7 @@ const Provider = (props: { children: React.ReactNode }) => {
       value={{
         ...appState,
         setFileCompleted,
+        setFileFailed,
         addDownloadFile,
         removeDownloadFile,
         setSnackBar,
@@ -245,6 +289,7 @@ const Provider = (props: { children: React.ReactNode }) => {
         changeSelectedDevice,
         addFile,
         removeFile,
+        toggleRecieveFilesSwitch,
       }}
     >
       {props.children}

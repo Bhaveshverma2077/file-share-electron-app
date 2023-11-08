@@ -30,8 +30,13 @@ const FileTile = (props: {
 }) => {
   const [progress, setProgress] = useState<null | number>(0);
   const [speed, setSpeed] = useState<number>(0);
-  const { selectedDevice, removeFile, setFileCompleted } =
-    useContext(appContext);
+  const {
+    selectedDevice,
+    removeFile,
+    setFileCompleted,
+    setFileFailed,
+    removeDownloadFile,
+  } = useContext(appContext);
   useEffect(() => {
     if (props.isDownload) {
       window.api.onDownloadProgress(
@@ -124,38 +129,71 @@ const FileTile = (props: {
               ></LinearProgress>
             )}
           </div>
+          {props.file.failed && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginRight: "24px",
+              }}
+            >
+              <p style={{ fontSize: 12, fontWeight: 700 }}>Canceled</p>
+            </div>
+          )}
           {!props.file.completed &&
-            !props.isDownload &&
+            !props.file.failed &&
             progress != null &&
             progress < 100 && (
               <>
                 <div className="file-icon-wrapper scale-animation margin-left-12 margin-right-12">
                   <div
                     onClick={() => {
-                      removeFile(props.file);
+                      if (props.isDownload) {
+                        removeFile(props.file);
+                        window.api.sendDownloadCancel({
+                          ip: props.ip,
+                          fileName: props.fileName,
+                        });
+                        setTimeout(() => {
+                          setProgress(null);
+                          setFileFailed(true, props.ip, props.fileName);
+                        }, 2000);
+                        return;
+                      }
+
+                      removeDownloadFile(props.file, props.ip);
+                      setTimeout(() => {
+                        setProgress(null);
+                        setFileFailed(false, props.ip, props.fileName);
+                      }, 2000);
+                      window.api.sendUploadCancel({
+                        ip: props.ip,
+                        fileName: props.fileName,
+                      });
                     }}
                     className="icon-container icon-container-35"
                   >
                     <CloseIcon></CloseIcon>
                   </div>
                 </div>
-                <div className="file-icon-wrapper scale-animation margin-right-12">
-                  <div
-                    onClick={() => {
-                      handleSendFile(selectedDevice!.ip, props.file.path);
-                    }}
-                    className="icon-container icon-container-35"
-                  >
-                    <UploadIcon></UploadIcon>
+                {!props.isDownload && (
+                  <div className="file-icon-wrapper scale-animation margin-right-12">
+                    <div
+                      onClick={() => {
+                        handleSendFile(selectedDevice!.ip, props.file.path);
+                      }}
+                      className="icon-container icon-container-35"
+                    >
+                      <UploadIcon></UploadIcon>
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
-          {props.isDownload && progress != null && (
+          {props.isDownload && !props.file.failed && props.file.completed && (
             <div
-              className={`file-icon-wrapper scale-animation margin-left-12 margin-right-12 ${
-                props.file.completed ? " " : "not-visible"
-              }`}
+              className={`file-icon-wrapper scale-animation margin-left-12 margin-right-12
+              `}
             >
               <div
                 onClick={() => {}}
