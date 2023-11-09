@@ -176,18 +176,21 @@ const FileTile = (props: {
                     <CloseIcon></CloseIcon>
                   </div>
                 </div>
-                {!props.isDownload && (
-                  <div className="file-icon-wrapper scale-animation margin-right-12">
-                    <div
-                      onClick={() => {
-                        handleSendFile(selectedDevice!.ip, props.file.path);
-                      }}
-                      className="icon-container icon-container-35"
-                    >
-                      <UploadIcon></UploadIcon>
+                {!props.isDownload &&
+                  !props.file.completed &&
+                  progress != null &&
+                  progress === 0 && (
+                    <div className="file-icon-wrapper scale-animation margin-right-12">
+                      <div
+                        onClick={() => {
+                          handleSendFile(selectedDevice!.ip, props.file.path);
+                        }}
+                        className="icon-container icon-container-35"
+                      >
+                        <UploadIcon></UploadIcon>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </>
             )}
           {props.isDownload && !props.file.failed && props.file.completed && (
