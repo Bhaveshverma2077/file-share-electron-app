@@ -1,27 +1,50 @@
-# React + TypeScript + Vite
+# File Share
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+File Share is a desktop application that allows users to easily share files on their local network. It's built using Electron, React, Vite, and Material-UI (MUI).
 
-Currently, two official plugins are available:
+## Preview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![image of app when uploading file](./screenshots/file-upload.png)
 
-## Expanding the ESLint configuration
+## Features
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- Share files within your local network
+- Simple and user-friendly interface
+- Fast and efficient file transfer
 
-- Configure the top-level `parserOptions` property like this:
+## Tech Stack
 
-```js
-   parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-   },
+| Technology    | Description                                       |
+|---------------|---------------------------------------------------|
+| Electron      | A framework for building cross-platform desktop applications using web technologies like HTML, CSS, and JavaScript. |
+| React         | A popular JavaScript library for building user interfaces. It's used for creating the frontend of the application. |
+| Vite          | A build tool that offers fast development server and build pipeline for modern web projects, including React applications. |
+| Material-UI   | A popular React UI framework that provides pre-designed components and styles, making it easy to create a visually appealing user interface. |
+
+
+## Installation
+
+### Prerequisites
+
+Before you get started, make sure you have Node.js and npm installed on your system.
+
+### Clone the repository
+
+```bash
+git clone https://github.com/Bhaveshverma2077/file-share-electron-app.git
+cd file-share
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Usage
+
+To build the application for production:
+
+```bash
+npm run build
+```
